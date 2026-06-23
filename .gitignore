@@ -8,5 +8,6 @@
 *.blg
 *.pyg
 *.bbl
+*.bst
 build/*
 _minted-main/*
