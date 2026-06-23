@@ -7,5 +7,6 @@
 *.toc
 *.blg
 *.pyg
+*.bbl
 build/*
 _minted-main/*

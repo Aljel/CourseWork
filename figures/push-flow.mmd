@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant C as Клиент
+    participant SSH as SSH-сервер (wish)
+    participant MW as Промежуточный слой
+    participant Svc as Сервис git
+    participant Git as Системный Git
+    participant DB as PostgreSQL
+
+    C->>SSH: `git push origin v1 -o "1"` (ssh://host:2222/курс/задание)
+    SSH->>MW: аутентифицированная сессия
+    MW->>DB: поиск ID курса и группы заданий
+    DB-->>MW: ID курса и группы заданий
+    MW->>MW: RepoRename: формирование имени репозитория
+    MW->>MW: AuthRepo: проверка доступа
+    MW->>DB: отпечаток ключа
+    DB-->>MW: уровень доступа
+    alt ReadWrite или Admin доступ
+        MW->>Git: git-receive-pack: запуск системного Git
+        Git->>Git: pre-receive: проверка тега по .mm-patterns
+        alt нет подходящих файлов
+            Git-->>MW: отклонение push (exit 1)
+        else есть совпадения или нет шаблонов
+            Git->>Git: post-receive: запись push-tags + push-options
+            Git-->>MW: обмен packfile завершён
+            MW->>Svc: вызов PushHook
+            Svc->>Svc: чтение push-options (позиция задания)
+            Svc->>Svc: чтение push-tags (хеши новых тегов)
+            alt позиция > 1
+                Svc->>DB: проверка предыдущего задания
+                DB-->>Svc: выполнено / не выполнено
+            end
+            Svc->>DB: регистрация попытки
+            DB-->>Svc: сохранено
+        end
+    else Нет доступа
+        MW-->>C: Фатальная ошибка
+    end
