@@ -16,7 +16,7 @@ sequenceDiagram
     DB-->>MW: уровень доступа
     alt ReadWrite или Admin доступ
         MW->>Git: git-receive-pack: запуск системного Git
-        Git->>Git: pre-receive: проверка тега по .mm-patterns
+        Git->>Git: pre-receive: проверка тега по .patterns
         alt нет подходящих файлов
             Git-->>MW: отклонение push (exit 1)
         else есть совпадения или нет шаблонов
