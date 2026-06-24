@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant C as Клиент
+    participant SSH as SSH-сервер (wish)
+    participant MW as Промежуточный слой
+    participant DB as PostgreSQL
+
+    C->>SSH: `git push origin v1 -o "1"` (ssh://host:2222/курс/задание)
+    SSH->>MW: аутентифицированная сессия
+    MW->>DB: поиск ID курса и группы заданий
+    DB-->>MW: ID курса и группы заданий
+    MW->>MW: RepoRename: формирование имени репозитория
+    MW->>MW: AuthRepo: проверка доступа
+    MW->>DB: отпечаток ключа
+    DB-->>MW: уровень доступа

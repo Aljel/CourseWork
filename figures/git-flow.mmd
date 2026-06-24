@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant MW as Промежуточный слой
+    participant Git as Системный Git
+    participant Svc as Сервис git
+
+    MW->>Git: git-receive-pack
+    Git->>Git: pre-receive: проверка .patterns
+    alt нет подходящих файлов
+        Git-->>MW: отклонение push
+    else OK
+        Git->>Git: post-receive: запись тегов
+        Git-->>MW: обмен завершён
+        MW->>Svc: PushHook
+    end

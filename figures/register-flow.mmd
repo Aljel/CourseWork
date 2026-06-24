@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant Svc as Сервис git
+    participant DB as PostgreSQL
+
+    Svc->>Svc: чтение push-опций
+    Svc->>DB: проверка послед. сдачи
+    DB-->>Svc: выполнено
+    Svc->>DB: регистрация попытки
+    DB-->>Svc: сохранено

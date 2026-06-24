@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant Svc as Сервис git
+    participant DB as PostgreSQL
+
+    Svc->>Svc: чтение push-options (позиция задания)
+    Svc->>Svc: чтение push-tags (хеши новых тегов)
+    alt позиция > 1
+        Svc->>DB: проверка предыдущего задания
+        DB-->>Svc: выполнено / не выполнено
+    end
+    Svc->>DB: регистрация попытки
+    DB-->>Svc: сохранено
