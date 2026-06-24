@@ -67,29 +67,19 @@
 ]
 
 #slide(title: "Отправка попытки: аутентификация")[
-  #image("figures/push-part1.pdf", width: 100%)
+  #align(center, image("figures/push-part1.pdf", width: 100%))
 ]
 
 #slide(title: "Отправка попытки: проверка и приём данных")[
-  #image("figures/push-part2.pdf", width: 75%)
+  #align(center, image("figures/push-part2.pdf", width: 75%))
 ]
 
 #slide(title: "Отправка попытки: регистрация попытки")[
   #align(center, image("figures/push-part3.pdf", width: 60%))
 ]
 
-#slide(title: "Два способа создать попытку")[
-  #image("figures/attempt-flow.pdf", width: 75%)
-]
-
-#slide(title: "Хранение")[
-  #cols(columns: (1fr, 1fr))[
-    *Git* — файлы: \
-    история, дедубликация, diff
-  ][
-    *PostgreSQL* — метаданные: \
-    курсы, попытки, хеш коммита
-  ]
+#slide(title: "Создание попытки через веб")[
+  #align(center, image("figures/web-flow.pdf", width: 120%))
 ]
 
 #blank-slide[

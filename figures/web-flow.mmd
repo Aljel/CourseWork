@@ -1,0 +1,10 @@
+sequenceDiagram
+    actor Student as Студент
+    participant Backend as Сервер
+    participant Git as Git-сервис
+    participant DB as База данных
+
+    Student->>Backend: POST /attempts (ZIP + courseID + taskGroupID + taskPosition)
+    Backend->>Backend: определение ID задания
+    Backend->>Git: отправка файлов в репозиторий группы
+    Git->>DB: сохранение попытки (пользователь, задание, хеш коммита)
