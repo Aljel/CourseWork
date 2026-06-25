@@ -313,8 +313,6 @@ sshServer, err := wish.NewServer(
 
 Такой подход позволяет использовать стандартный Git-клиент без модификаций --- студенту достаточно добавить SSH-ключ в аккаунт на платформе и клонировать репозиторий.
 
-Хранилище данных состоит из трёх компонентов: PostgreSQL (пользователи, курсы, задания, попытки), Redis (Valkey) для сессий аутентификации и файловой системы для bare Git-репозиториев.
-
 \subsection{Реализация Git-сервера и аутентификация}
 
 Для приёма решений через Git необходимо обеспечить два ключевых механизма: аутентификацию пользователей и привязку Git-репозитория к конкретному курсу, заданию и студенту.
@@ -337,14 +335,14 @@ func (r *PGRepo) CheckPublicKeyAuth(ctx ssh.Context, pk ssh.PublicKey) bool {
 
 \subsubsection{Маршрутизация репозиториев}
 
-Когда пользователь выполняет \path{git} \path{push} \path{ssh://host:2222/course_name/task_name}, промежуточный обработчик \texttt{RepoRename} преобразует свободно заданный путь в детерминированное имя репозитория. Алгоритм преобразования:
+Когда пользователь выполняет \path{git} \path{push} \path{ssh://host:2222/course_name/task_name}, промежуточный обработчик \texttt{RepoRename} преобразует путь \path{course_name/task_name} в детерминированное имя репозитория. Алгоритм преобразования:
 
 ТУТ НУЖНО ВСТАВИТЬ ССЫЛКУ НА ПРИЛОЖЕНИЕ И В НЕМ ОПИСАТЬ ФУНКЦИЮ RepoRename
 
 \begin{enumerate}
-	\item По имени курса из базы находится \texttt{CourseID}.
-	\item По имени группы заданий --- \texttt{TaskGroupID}.
-	\item По отпечатку SSH-ключа --- \texttt{UserID} (идентификатор студента).
+	\item По имени курса из базы находится \texttt{CourseID} (идентификатор курса).
+	\item По имени группы заданий \texttt{TaskGroupID} (идентификатор группы заданий).
+	\item По отпечатку SSH-ключа  \texttt{UserID} (идентификатор студента).
 	\item Из трёх идентификаторов формируется строка вида \path{CourseID:TaskGroupID:UserID}, от которой вычисляется SHA-1 хеш:
 
 	      \begin{minted}[frame=none,fontsize=\small]{go}
@@ -360,7 +358,7 @@ func (repoID *RepoID) IntoPath() string {
 	\item Итоговый путь репозитория --- \texttt{repos/<hash>.git}.
 \end{enumerate}
 
-Детерминированность пути гарантирует, что все операции одного студента над одной группой заданий попадают в один и тот же репозиторий. При этом на одно задание может быть несколько попыток --- каждая оформляется как отдельный тег.
+Детерминированность пути гарантирует, что все операции одного студента над одной группой заданий попадают в один и тот же репозиторий.
 
 \subsubsection{Разграничение доступа}
 
@@ -386,15 +384,6 @@ func (s *Service) AuthRepo(repo string, pk ssh.PublicKey) pkggit.AccessLevel {
 
 Уровень доступа определяется по таблице \texttt{course\_members}: студент получает ReadWriteAccess к своему репозиторию, преподаватель --- AdminAccess ко всем репозиториям курса.
 
-Полная последовательность операций при push через SSH показана на рисунке~\ref{fig:push-flow}.
-
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=\textwidth]{figures/push-flow.pdf}
-	\caption{Последовательность операций при git push через SSH}
-	\label{fig:push-flow}
-\end{figure}
-
 \subsection{Отправка решений}
 
 \subsubsection{Процесс отправки с помощью \texttt{git push}}
@@ -408,14 +397,14 @@ git tag submission-1
 git push origin submission-1 -o "1"
 \end{minted}
 
-Промежуточный слой SSH перехватывает команду \texttt{git-receive-pack} и запускает нативный бинарный Git. В bare-репозиторий предварительно записаны два сценария Git (hooks), описанные в разделе~\ref{sec:gitwire}:
+Промежуточный слой SSH перехватывает команду \texttt{git-receive-pack} и запускает нативный бинарный Git. В bare-репозиторий предварительно записаны два сценария Git (hooks):
 
 \begin{enumerate}
-	\item pre-receive --- выполняется до обновления ссылок. Его исходный код, автоматически записываемый в каждый bare-репозиторий при инициализации:
+	\item pre-receive --- выполняется после получения файлов от клинта, до обновления ссылок. Его исходный код автоматически записывается в каждый bare-репозиторий при его инициализации:
 
 	      \begin{minted}[frame=none,fontsize=\small,breaklines]{bash}
     #!/bin/sh
-PATTERNS_FILE="$GIT_DIR/.mm-patterns"
+PATTERNS_FILE="$GIT_DIR/.patterns"
 
 TASK_POS=""
 if [ -n "$GIT_PUSH_OPTION_COUNT" ] && [ "$GIT_PUSH_OPTION_COUNT" -gt 0 ]; then
@@ -456,12 +445,31 @@ while read OLD NEW REF; do
 done
 \end{minted}
 
-	      Скрипт читает push-опции из переменной окружения \texttt{GIT\_PUSH\_OPTION\_0}, извлекает номер задания, находит соответствующие паттерны в файле \texttt{.mm-patterns} и через \texttt{git ls-tree} проверяет каждый файл коммита. Если ни один файл не совпал --- хук возвращает ошибку, и операция отклоняется;
+	      Скрипт читает push-опции из переменной окружения \texttt{GIT\_PUSH\_OPTION\_0}, извлекает номер задания, находит соответствующие паттерны в файле \texttt{.patterns} и через \texttt{git ls-tree} проверяет каждый файл коммита. Если ни один файл не совпал --- хук возвращает ошибку, и операция отклоняется;
 
-	\item post-receive --- выполняется после успешного приёма данных. Записывает хеши новых тегов в файл \texttt{push-tags}, а push-параметры --- в файл \texttt{push-options}. После завершения работы Git промежуточный слой читает эти файлы и вызывает обработчик \texttt{OnPush}.
+	\item post-receive --- выполняется после обновления ссылок. Его исходный код:
+
+	      \begin{minted}[frame=none,fontsize=\small]{bash}
+#!/bin/sh
+while read OLD NEW REF; do
+  case "$REF" in refs/tags/*)
+    [ "$OLD" = "0000000000000000000000000000000000000000" ] && echo "$NEW"
+  ;; esac
+done > "$GIT_DIR/push-tags"
+if [ -n "$GIT_PUSH_OPTION_COUNT" ] && [ "$GIT_PUSH_OPTION_COUNT" -gt 0 ]; then
+  i=0
+  while [ $i -lt $GIT_PUSH_OPTION_COUNT ]; do
+    eval "opt=\$GIT_PUSH_OPTION_$i"
+    echo "$opt"
+    i=$((i+1))
+  done > "$GIT_DIR/push-options"
+fi
+\end{minted}
+
+	      Скрипт записывает хеши принятых тегов в файл \texttt{push-tags}, а push-опции --- в \texttt{push-options}.
 \end{enumerate}
 
-Функция \texttt{OnPush} реализует всю логику на стороне сервера:
+После завершения работы хуков на стороне Git сервера, выполняется функционал основного сервиса на языке Go. в промежуточном слое (Middleware) вызывается функция \path{OnPush}.
 
 \begin{minted}[frame=none,fontsize=\small]{go}
 func (s *Service) OnPush(originalPath string, repo string, pk ssh.PublicKey) {
