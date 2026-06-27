@@ -294,7 +294,7 @@ HTTP API реализован на фреймворке Huma v2, который 
 
 SSH-сервер построен на библиотеке Charm Wish и работает на отдельном порту (2222 по умолчанию). Разворачивается он функцией библиотеки Charm Wish в функции main:
 
-\begin{minted}[frame=none,fontsize=\small]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 sshServer, err := wish.NewServer(
     wish.WithAddress(
         net.JoinHostPort(config.Host, strconv.Itoa(config.SSHPort)),
@@ -322,7 +322,7 @@ sshServer, err := wish.NewServer(
 
 Пользователь может добавить один или несколько публичных SSH-ключей в свой аккаунт через HTTP API (маршруты \path{POST /git/add_key} и \path{DELETE /git/delete_key}). Ключи хранятся в таблице \texttt{ssh\_keys} базы данных, связываясь с пользователем через ключ на таблицу \texttt{users}. При подключении по SSH сервер Charm Wish, вызывает обработчик \texttt{PublicKeyAuth}, который ищет отпечаток предложенного ключа в базе:
 
-\begin{minted}[frame=none,fontsize=\small]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (r *PGRepo) CheckPublicKeyAuth(ctx ssh.Context, pk ssh.PublicKey) bool {
     fingerprint := gossh.FingerprintSHA256(pk)
     _, err := r.GetParticipant(fingerprint)
@@ -344,7 +344,7 @@ func (r *PGRepo) CheckPublicKeyAuth(ctx ssh.Context, pk ssh.PublicKey) bool {
 	\item По отпечатку SSH-ключа  \texttt{UserID} (идентификатор студента).
 	\item Из трёх идентификаторов формируется строка вида \path{CourseID:TaskGroupID:UserID}, от которой вычисляется SHA-1 хеш:
 
-	      \begin{minted}[frame=none,fontsize=\small]{go}
+	      \begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (repoID *RepoID) IntoPath() string {
     hasher := sha1.New()
     data, _ := json.Marshal(repoID)
@@ -365,7 +365,7 @@ func (repoID *RepoID) IntoPath() string {
 
 После аутентификации промежуточный слой проверяет уровень доступа к репозиторию через функцию \texttt{AuthRepo}:
 
-\begin{minted}[frame=none,fontsize=\small]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) AuthRepo(repo string, pk ssh.PublicKey) pkggit.AccessLevel {
     if s.db.CheckPublicKeyAuth(nil, pk) {
         return pkggit.ReadWriteAccess
@@ -403,7 +403,7 @@ git push origin submission-1 -o "1"
 \begin{enumerate}
 	\item pre-receive --- выполняется после получения файлов от клинта, до обновления ссылок. Его исходный код автоматически записывается в каждый bare-репозиторий при его инициализации:
 
-	      \begin{minted}[frame=none,fontsize=\small,breaklines]{bash}
+	      \begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{bash}
     #!/bin/sh
 PATTERNS_FILE="$GIT_DIR/.patterns"
 
@@ -450,7 +450,7 @@ done
 
 	\item post-receive --- выполняется после обновления ссылок. Его исходный код:
 
-	      \begin{minted}[frame=none,fontsize=\small]{bash}
+	      \begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{bash}
 #!/bin/sh
 while read OLD NEW REF; do
   case "$REF" in refs/tags/*)
@@ -525,7 +525,7 @@ fi
 
 Схема этих таблиц в базе данных:
 
-\begin{minted}[frame=none,fontsize=\small]{sql}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{sql}
 CREATE TABLE attempts (
     id uuid NOT NULL PRIMARY KEY DEFAULT uuidv7(),
     user_id uuid NOT NULL REFERENCES users(id),
@@ -546,7 +546,7 @@ CREATE TABLE attempt_transitions (
 
 Преподаватель может загрузить шаблон решения через маршрут \texttt{POST /tasks/\{id\}/template} в виде ZIP-архива. Сервер распаковывает архив и вызывает функцию \texttt{UpdateTemplate} (приложение~\ref{sec:template}), которая создаёт или обновляет bare-репозиторий шаблона. Имя репозитория вычисляется детерминированно через SHA-1 от идентификатора группы заданий:
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func TemplatePath(taskGroupID uuid.UUID) string {
 	hasher := sha1.New()
 	_, _ = fmt.Fprint(hasher, "template:", taskGroupID.String())
@@ -557,7 +557,7 @@ func TemplatePath(taskGroupID uuid.UUID) string {
 
 При первой отправке решения студентом система вызывает \path{initRepoWithTemplate}. Если шаблон существует, функция клонирует его во временную директорию, инициализирует пустой bare-репозиторий студента и выполняет push из временной копии в репозиторий студента. Если шаблон не предусмотрен, репозиторий инициализируется пустым:
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) initRepoWithTemplate(repoID RepoID) error {
 	templateName := TemplatePath(repoID.TaskGroupID)
 	templatePath := filepath.Join(repoDir, templateName+".git")
@@ -619,7 +619,7 @@ func (s *Service) initRepoWithTemplate(repoID RepoID) error {
 
 \texttt{GET /attempts/diff} позволяет получить разницу между двумя попытками. Параметрами запроса передаются идентификаторы попыток. Сервер открывает bare-репозиторий, извлекает хеши коммитов из соответствующих записей \texttt{attempt\_transitions} и выполняет \texttt{git diff} между ними:
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) GetDiff(attemptID1, attemptID2 uuid.UUID) ([]string, error) {
     info1, _ := s.db.GetAttemptCommitInfo(attemptID1)
     info2, _ := s.db.GetAttemptCommitInfo(attemptID2)
@@ -670,7 +670,8 @@ func (s *Service) GetDiff(attemptID1, attemptID2 uuid.UUID) ([]string, error) {
 
 \section{Программный код метода \texttt{pkggit.Middleware}}
 \label{sec:Middleware}
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func Middleware(
 	repoDir string,
 	RepoRename func(string, gossh.PublicKey) (string, error),
@@ -733,7 +734,7 @@ func Middleware(
 \section{Программный код функции \texttt{RepoRename}}
 \label{sec:RepoRename}
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
     func (s *Service) RepoRename(original string, pk gossh.PublicKey) (string, error) {
 	fingerprint := gossh.FingerprintSHA256(pk)
 	repoID, err := s.GetRepoID(original, fingerprint)
@@ -769,7 +770,8 @@ func Middleware(
 
 \section{Программный код функции \texttt{OnPush}}
 \label{sec:OnPush}
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) OnPush(originalPath string, repo string, pk ssh.PublicKey) {
     fingerprint := gossh.FingerprintSHA256(pk)
     repoID, err := s.GetRepoID(originalPath, fingerprint)
@@ -825,7 +827,7 @@ func (s *Service) OnPush(originalPath string, repo string, pk ssh.PublicKey) {
 \section{Программный код функции \texttt{PushAttempt}}
 \label{sec:webpush}
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) PushAttempt(repoID RepoID, taskID uuid.UUID, files []FileInfo) (string, error) {
 	repoName := repoID.IntoPath()
 	bareRepoPath := filepath.Join(repoDir, repoName+".git")
@@ -968,7 +970,7 @@ func UnzipFiles(data []byte) ([]FileInfo, error) {
 \section{Программный код функции \texttt{UpdateTemplate}}
 \label{sec:template}
 
-\begin{minted}[frame=none,fontsize=\small,breaklines]{go}
+\begin{minted}[linenos, breaklines=true, style=bw, fontsize=\small]{go}
 func (s *Service) UpdateTemplate(taskGroupID uuid.UUID, files []FileInfo) error {
 	templateName := TemplatePath(taskGroupID)
 	templatePath := filepath.Join(repoDir, templateName+".git")
