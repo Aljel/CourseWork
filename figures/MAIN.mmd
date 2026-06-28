@@ -1,0 +1,30 @@
+```mermaid
+flowchart LR
+    WB[Браузер]
+    GC[Git-клиент]
+    HTTP[HTTP-сервер]
+    SSH[SSH-сервер]
+    subgraph "Хранилище"
+        PG[PostgreSQL]
+
+    end
+    subgraph "Git"
+        BR[Bare-репозитории]
+    end
+    subgraph "Бизнес-логика"
+        GT[Git service:]
+        OS[Other services]
+        AS[Attempt services]
+        TS[Task services]
+    end
+    GC <--> |git command| SSH
+    WB <--> HTTP
+    HTTP <--> OS
+    SSH <--> GT
+    GT <-->|pre-receive\npost-receive| BR
+    PG <--> OS
+    PG <--> GT
+    AS <--> GT
+    AS <--> OS
+    TS <--> OS
+```
